@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<body style="margin:0; overflow:hidden; background:black;">
+<canvas id="myCanvas"></canvas>
+
+<script>
+let creal = -0.8;
+let cimag = 0.156;
+
+let zoom = 1;
+let zoomSpeed = 1.02;
+
+let baseX = 0;
+let baseY = 0;
+
+const canvas = document.getElementById("myCanvas");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+function Julia() {
+    const width = canvas.width;
+    const height = canvas.height;
+
+    const img = ctx.createImageData(width, height);
+    const data = img.data;
+
+    const maxIter = 200;
+// les gro calculs am am am
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+
+            // coordonnées avec zoom 
+            let cx = (x - width / 2) / (zoom * 0.4 * width) + baseX;
+            let cy = (y - height / 2) / (zoom * 0.4 * height) + baseY;
+
+            let i = 0;
+            while (cx * cx + cy * cy < 4 && i < maxIter) {
+                let xt = cx * cx - cy * cy + creal;
+                cy = 2 * cx * cy + cimag;
+                cx = xt;
+                i++;
+            }
+
+            let idx = 4 * (y * width + x);
+
+            if (i === maxIter) {
+                data[idx] = data[idx+1] = data[idx+2] = 0;
+            } else {
+                let hue = (i * 360 / maxIter) % 360;
+                let rgb = hslToRgb(hue / 360, 0.5, 0.5);
+                data[idx] = rgb[0];
+                data[idx+1] = rgb[1];
+                data[idx+2] = rgb[2];
+            }
+
+            data[idx+3] = 255;
+        }
+    }
+
+    ctx.putImageData(img, 0, 0);
+
+    zoom *= zoomSpeed;
+
+    // zoom infini (sinon le pc dead reboot toutes les 200 frames)
+    if (zoom > 200) {
+        baseX += (0 - baseX) / zoom;
+        baseY += (0 - baseY) / zoom;
+        zoom = 1;
+    }
+
+    requestAnimationFrame(Julia);
+}
+
+// convert hsl to rgb
+function hslToRgb(h, s, l) {
+    let r, g, b;
+    if (s === 0) r = g = b = l;
+    else {
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1/6) return p + (q - p) * 6 * t;
+            if (t < 1/2) return q;
+            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+    }
+    return [r * 255, g * 255, b * 255];
+}
+
+Julia();
+</script>
+
+
+</body>
+</html>
